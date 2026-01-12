@@ -344,11 +344,13 @@ fn item_module(cx: &Context<'_>, item: &clean::Item, items: &[clean::Item]) -> i
                     clean::ExternCrateItem { ref src } => {
                         use crate::html::format::print_anchor;
 
+                        write!(w, "<dt><code>")?;
+                        render_attributes_in_code(w, myitem, "", cx)?;
                         match *src {
                             Some(src) => {
                                 write!(
                                     w,
-                                    "<dt><code>{}extern crate {} as {};",
+                                    "{}extern crate {} as {};",
                                     visibility_print_with_space(myitem, cx),
                                     print_anchor(myitem.item_id.expect_def_id(), src, cx),
                                     EscapeBodyTextWithWbr(myitem.name.unwrap().as_str())
@@ -357,7 +359,7 @@ fn item_module(cx: &Context<'_>, item: &clean::Item, items: &[clean::Item]) -> i
                             None => {
                                 write!(
                                     w,
-                                    "<dt><code>{}extern crate {};",
+                                    "{}extern crate {};",
                                     visibility_print_with_space(myitem, cx),
                                     print_anchor(
                                         myitem.item_id.expect_def_id(),
@@ -1849,7 +1851,6 @@ fn item_variants(
 fn item_macro(cx: &Context<'_>, it: &clean::Item, t: &clean::Macro) -> impl fmt::Display {
     fmt::from_fn(|w| {
         wrap_item(w, |w| {
-            // FIXME: Also print `#[doc(hidden)]` for `macro_rules!` if it `is_doc_hidden`.
             render_attributes_in_code(w, it, "", cx)?;
             if !t.macro_rules {
                 write!(w, "{}", visibility_print_with_space(it, cx))?;
