@@ -340,6 +340,19 @@ fn item_module(cx: &Context<'_>, item: &clean::Item, items: &[clean::Item]) -> i
             }
 
             for (_, myitem) in &not_stripped_items[&type_] {
+                let visibility_and_hidden = |item: &clean::Item| match item.visibility(tcx) {
+                    Some(ty::Visibility::Restricted(_)) => {
+                        if item.is_doc_hidden() {
+                            // Don't separate with a space when there are two of them
+                            "<span title=\"Restricted Visibility\">&nbsp;🔒</span><span title=\"Hidden item\">👻</span> "
+                        } else {
+                            "<span title=\"Restricted Visibility\">&nbsp;🔒</span> "
+                        }
+                    }
+                    _ if item.is_doc_hidden() => "<span title=\"Hidden item\">&nbsp;👻</span> ",
+                    _ => "",
+                };
+
                 match myitem.kind {
                     clean::ExternCrateItem { ref src } => {
                         use crate::html::format::print_anchor;
@@ -377,6 +390,7 @@ fn item_module(cx: &Context<'_>, item: &clean::Item, items: &[clean::Item]) -> i
                                 print_extra_info_tags(tcx, myitem, item, Some(import_def_id))
                                     .to_string()
                             });
+                        let visibility_and_hidden = visibility_and_hidden(myitem);
                         let id = match import.kind {
                             clean::ImportKind::Simple(s) => {
                                 format!(" id=\"{}\"", cx.derive_id(format!("reexport.{s}")))
@@ -388,13 +402,13 @@ fn item_module(cx: &Context<'_>, item: &clean::Item, items: &[clean::Item]) -> i
                             "<dt{id}>\
                                 <code>"
                         )?;
-                        render_attributes_in_code(w, myitem, "", cx)?;
                         write!(
                             w,
-                            "{vis}{imp}</code>{stab_tags}\
+                            "{vis}{imp}</code>{visibility_and_hidden}{stab_tags}\
                             </dt>",
                             vis = visibility_print_with_space(myitem, cx),
                             imp = print_import(import, cx),
+                            visibility_and_hidden = visibility_and_hidden,
                         )?;
                     }
                     _ => {
@@ -414,20 +428,7 @@ fn item_module(cx: &Context<'_>, item: &clean::Item, items: &[clean::Item]) -> i
                             }
                             _ => "",
                         };
-                        let visibility_and_hidden = match myitem.visibility(tcx) {
-                            Some(ty::Visibility::Restricted(_)) => {
-                                if myitem.is_doc_hidden() {
-                                    // Don't separate with a space when there are two of them
-                                    "<span title=\"Restricted Visibility\">&nbsp;🔒</span><span title=\"Hidden item\">👻</span> "
-                                } else {
-                                    "<span title=\"Restricted Visibility\">&nbsp;🔒</span> "
-                                }
-                            }
-                            _ if myitem.is_doc_hidden() => {
-                                "<span title=\"Hidden item\">&nbsp;👻</span> "
-                            }
-                            _ => "",
-                        };
+                        let visibility_and_hidden = visibility_and_hidden(myitem);
 
                         let docs = MarkdownSummaryLine(&myitem.doc_value(), &myitem.links(cx))
                             .into_string();

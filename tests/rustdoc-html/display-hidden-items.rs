@@ -7,7 +7,11 @@
 //@ has 'foo/index.html'
 //@ has - '//dt/span[@title="Hidden item"]' '👻'
 
-//@ has - '//*[@id="reexport.hidden_reexport"]/code/*[@class="code-attribute"]' '#[doc(hidden)]'
+//@ matchesraw 'foo/index.html' '(?s)<dt><code><div class="code-attribute">#\[doc\(hidden\)\]</div>pub extern crate .*?hidden_(?:<wbr>)?core;</code></dt>'
+#[doc(hidden)]
+pub extern crate core as hidden_core;
+
+//@ has - '//*[@id="reexport.hidden_reexport"]/span[@title="Hidden item"]' '👻'
 //@ has - '//*[@id="reexport.hidden_reexport"]/code' 'pub use hidden::inside_hidden as hidden_reexport;'
 #[doc(hidden)]
 pub use hidden::inside_hidden as hidden_reexport;
