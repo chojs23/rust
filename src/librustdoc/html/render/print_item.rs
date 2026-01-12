@@ -346,6 +346,7 @@ fn item_module(cx: &Context<'_>, item: &clean::Item, items: &[clean::Item]) -> i
 
                         match *src {
                             Some(src) => {
+                                render_attributes_in_code(w, myitem, "", cx)?;
                                 write!(
                                     w,
                                     "<dt><code>{}extern crate {} as {};",
@@ -355,6 +356,7 @@ fn item_module(cx: &Context<'_>, item: &clean::Item, items: &[clean::Item]) -> i
                                 )?;
                             }
                             None => {
+                                render_attributes_in_code(w, myitem, "", cx)?;
                                 write!(
                                     w,
                                     "<dt><code>{}extern crate {};",
