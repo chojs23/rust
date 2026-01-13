@@ -7,7 +7,7 @@
 //@ has 'foo/index.html'
 //@ has - '//dt/span[@title="Hidden item"]' '👻'
 
-//@ matchesraw 'foo/index.html' '(?s)<dt><code><div class="code-attribute">#\[doc\(hidden\)\]</div>pub extern crate .*?hidden_(?:<wbr>)?core;</code></dt>'
+//@ matchesraw 'foo/index.html' '(?s)<dt><code><div class="code-attribute">#\[doc\(hidden\)\]</div>pub extern crate .*?hidden_(?:<wbr>)?core;</code><span title="Hidden item">&nbsp;👻</span> </dt>'
 #[doc(hidden)]
 pub extern crate core as hidden_core;
 

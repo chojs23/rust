@@ -357,6 +357,7 @@ fn item_module(cx: &Context<'_>, item: &clean::Item, items: &[clean::Item]) -> i
                     clean::ExternCrateItem { ref src } => {
                         use crate::html::format::print_anchor;
 
+                        let visibility_and_hidden = visibility_and_hidden(myitem);
                         write!(w, "<dt><code>")?;
                         render_attributes_in_code(w, myitem, "", cx)?;
                         match *src {
@@ -382,7 +383,7 @@ fn item_module(cx: &Context<'_>, item: &clean::Item, items: &[clean::Item]) -> i
                                 )?;
                             }
                         }
-                        write!(w, "</code></dt>")?
+                        write!(w, "</code>{visibility_and_hidden}</dt>")?
                     }
                     clean::ImportItem(ref import) => {
                         let stab_tags =
