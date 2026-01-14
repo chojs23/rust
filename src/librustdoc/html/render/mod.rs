@@ -1038,7 +1038,7 @@ fn assoc_const(
 ) -> impl fmt::Display {
     let tcx = cx.tcx();
     fmt::from_fn(move |w| {
-        render_attributes_in_code(w, it, &" ".repeat(indent), cx)?;
+        let _ = render_attributes_in_code(w, it, &" ".repeat(indent), cx)?;
         write!(
             w,
             "{indent}{vis}const <a{href} class=\"constant\">{name}</a>{generics}: {ty}",
@@ -1078,7 +1078,7 @@ fn assoc_type(
     cx: &Context<'_>,
 ) -> impl fmt::Display {
     fmt::from_fn(move |w| {
-        render_attributes_in_code(w, it, &" ".repeat(indent), cx)?;
+        let _ = render_attributes_in_code(w, it, &" ".repeat(indent), cx)?;
         write!(
             w,
             "{indent}{vis}type <a{href} class=\"associatedtype\">{name}</a>{generics}",
@@ -1147,10 +1147,10 @@ fn assoc_method(
         let (indent, indent_str, end_newline) = if parent == ItemType::Trait {
             header_len += 4;
             let indent_str = "    ";
-            render_attributes_in_code(w, meth, indent_str, cx)?;
+            let _ = render_attributes_in_code(w, meth, indent_str, cx)?;
             (4, indent_str, Ending::NoNewline)
         } else {
-            render_attributes_in_code(w, meth, "", cx)?;
+            let _ = render_attributes_in_code(w, meth, "", cx)?;
             (0, "", Ending::Newline)
         };
         write!(
@@ -2915,9 +2915,31 @@ fn render_attributes_in_code(
     item: &clean::Item,
     prefix: &str,
     cx: &Context<'_>,
-) -> fmt::Result {
-    if item.is_doc_hidden() {
-        render_code_attribute(prefix, "#[doc(hidden)]", w)?;
+) -> Result<bool, fmt::Error> {
+    render_attributes_in_code_with_options(w, item, prefix, cx, true, None)
+}
+
+pub(super) fn render_attributes_in_code_with_options(
+    w: &mut impl fmt::Write,
+    item: &clean::Item,
+    prefix: &str,
+    cx: &Context<'_>,
+    render_doc_hidden: bool,
+    open_tag: Option<&str>,
+) -> Result<bool, fmt::Error> {
+    let mut wrote_any = false;
+    let mut render_attr = |attr: &str| -> fmt::Result {
+        if !wrote_any {
+            if let Some(open_tag) = open_tag {
+                w.write_str(open_tag)?;
+            }
+            wrote_any = true;
+        }
+        render_code_attribute(prefix, attr, w)
+    };
+
+    if render_doc_hidden && item.is_doc_hidden() {
+        render_attr("#[doc(hidden)]")?;
     }
     for attr in &item.attrs.other_attrs {
         let hir::Attribute::Parsed(kind) = attr else { continue };
@@ -2932,15 +2954,15 @@ fn render_attributes_in_code(
             AttributeKind::NonExhaustive(..) => Cow::Borrowed("#[non_exhaustive]"),
             _ => continue,
         };
-        render_code_attribute(prefix, attr.as_ref(), w)?;
+        render_attr(attr.as_ref())?;
     }
 
     if let Some(def_id) = item.def_id()
         && let Some(repr) = repr_attribute(cx.tcx(), cx.cache(), def_id)
     {
-        render_code_attribute(prefix, &repr, w)?;
+        render_attr(&repr)?;
     }
-    Ok(())
+    Ok(wrote_any)
 }
 
 fn render_repr_attribute_in_code(
