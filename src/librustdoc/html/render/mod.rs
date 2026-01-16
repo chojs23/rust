@@ -2928,39 +2928,52 @@ pub(super) fn render_attributes_in_code_with_options(
     open_tag: Option<&str>,
 ) -> Result<bool, fmt::Error> {
     let mut wrote_any = false;
-    let mut render_attr = |attr: &str| -> fmt::Result {
-        if !wrote_any {
-            if let Some(open_tag) = open_tag {
-                w.write_str(open_tag)?;
+    let mut render_all_attrs =
+        |render_attr: &mut dyn FnMut(&str) -> fmt::Result| -> Result<(), fmt::Error> {
+            if render_doc_hidden && item.is_doc_hidden() {
+                render_attr("#[doc(hidden)]")?;
             }
-            wrote_any = true;
-        }
-        render_code_attribute(prefix, attr, w)
-    };
+            for attr in &item.attrs.other_attrs {
+                let hir::Attribute::Parsed(kind) = attr else { continue };
+                let attr = match kind {
+                    AttributeKind::LinkSection { name, .. } => Cow::Owned(format!(
+                        "#[unsafe(link_section = {})]",
+                        Escape(&format!("{name:?}"))
+                    )),
+                    AttributeKind::NoMangle(..) => Cow::Borrowed("#[unsafe(no_mangle)]"),
+                    AttributeKind::ExportName { name, .. } => Cow::Owned(format!(
+                        "#[unsafe(export_name = {})]",
+                        Escape(&format!("{name:?}"))
+                    )),
+                    AttributeKind::NonExhaustive(..) => Cow::Borrowed("#[non_exhaustive]"),
+                    _ => continue,
+                };
+                render_attr(attr.as_ref())?;
+            }
 
-    if render_doc_hidden && item.is_doc_hidden() {
-        render_attr("#[doc(hidden)]")?;
-    }
-    for attr in &item.attrs.other_attrs {
-        let hir::Attribute::Parsed(kind) = attr else { continue };
-        let attr = match kind {
-            AttributeKind::LinkSection { name, .. } => {
-                Cow::Owned(format!("#[unsafe(link_section = {})]", Escape(&format!("{name:?}"))))
+            if let Some(def_id) = item.def_id()
+                && let Some(repr) = repr_attribute(cx.tcx(), cx.cache(), def_id)
+            {
+                render_attr(&repr)?;
             }
-            AttributeKind::NoMangle(..) => Cow::Borrowed("#[unsafe(no_mangle)]"),
-            AttributeKind::ExportName { name, .. } => {
-                Cow::Owned(format!("#[unsafe(export_name = {})]", Escape(&format!("{name:?}"))))
-            }
-            AttributeKind::NonExhaustive(..) => Cow::Borrowed("#[non_exhaustive]"),
-            _ => continue,
+            Ok(())
         };
-        render_attr(attr.as_ref())?;
-    }
 
-    if let Some(def_id) = item.def_id()
-        && let Some(repr) = repr_attribute(cx.tcx(), cx.cache(), def_id)
-    {
-        render_attr(&repr)?;
+    if let Some(open_tag) = open_tag {
+        let mut render_attr = |attr: &str| -> fmt::Result {
+            if !wrote_any {
+                w.write_str(open_tag)?;
+                wrote_any = true;
+            }
+            render_code_attribute(prefix, attr, w)
+        };
+        render_all_attrs(&mut render_attr)?;
+    } else {
+        let mut render_attr = |attr: &str| -> fmt::Result {
+            wrote_any = true;
+            render_code_attribute(prefix, attr, w)
+        };
+        render_all_attrs(&mut render_attr)?;
     }
     Ok(wrote_any)
 }

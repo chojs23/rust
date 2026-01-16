@@ -5,9 +5,8 @@
 #![crate_name = "foo"]
 
 //@ has 'foo/index.html'
-//@ has - '//dt/span[@title="Hidden item"]' '👻'
+//@ matches - '//dt[code]' 'pub extern crate .*hidden_core;.*👻a'
 
-//@ has - '//dt/span[@title="Hidden item"]' '👻'
 //@ has - '//dt/code' 'pub extern crate core as hidden_core;'
 #[doc(hidden)]
 pub extern crate core as hidden_core;
@@ -48,7 +47,9 @@ pub struct Struct {
 impl Struct {
     //@ has - '//*[@id="method.new"]/*[@class="code-header"]' 'pub fn new() -> Self'
     #[doc(hidden)]
-    pub fn new() -> Self { Self { a: 0 } }
+    pub fn new() -> Self {
+        Self { a: 0 }
+    }
 }
 
 impl Trait for Struct {
